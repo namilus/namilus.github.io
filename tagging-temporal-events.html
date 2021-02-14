@@ -1,0 +1,594 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- Feb 14, 2021 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tagging Temporal Events</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="Mohamed Suliman" />
+<link rel='icon' type='image/x-icon' href='/images/favicon.ico'/>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<link rel='stylesheet' href='https://code.cdn.mozilla.net/fonts/fira.css'>
+<link rel='stylesheet' href='/css/site.css?v=2' type='text/css'/>
+<link rel='stylesheet' href='/css/custom.css' type='text/css'/>
+<link rel='stylesheet' href='/css/syntax-coloring.css' type='text/css'/>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2019 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        displayAlign: "center",
+        displayIndent: "0em",
+        tex2jax: { 
+              processEscapes: true
+        },
+        "HTML-CSS": { scale: 100,
+                        linebreaks: { automatic: "false" },
+                        webFont: "TeX"
+                       },
+        SVG: {scale: 100,
+              linebreaks: { automatic: "false" },
+              font: "TeX"},
+        NativeMML: {scale: 100},
+        TeX: { equationNumbers: {autoNumber: "AMS"},
+               MultLineWidth: "85%",
+               TagSide: "right",
+               TagIndent: ".8em",
+               Macros: {
+                   argmax : ["\operatorname{argmax}"]
+               }
+             }
+});
+</script>
+<script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body>
+<div id="org-div-home-and-up">
+ <a accesskey="h" href="/"> UP </a>
+ |
+ <a accesskey="H" href="/"> HOME </a>
+</div><header id="top" class="status">
+<div class='intro'>
+  <img src='/images/about/merchant.jpg' alt='John Doe' class='no-border'/>
+  <h1>
+    <span class="gray">Mohamed</span>
+    <span class="black">Suliman</span>
+  </h1>
+  <p>I have opinions on things</p>
+</div>
+
+<div class='nav'>
+<ul>
+<li><a href='/'>Blog</a>.</li>
+<li><a href='http://github.com/namilus'>GitHub</a>.</li>
+<li><a href='/about/'>About</a></li>
+</ul>
+</div>
+</header>
+<main id="content">
+<h1 class="title">Tagging Temporal Events</h1>
+<section id="outline-container-org48b92ba" class="outline-2">
+<h2 id="org48b92ba">INTRODUCTION</h2>
+<div class="outline-text-2" id="text-org48b92ba">
+<p>
+Rarely does one find some text, be it a news article, blog, chapter of a book, tweet, etc., that does not contain some degree of temporal information. The majority of texts we read are full of events that occur, either in the past, in the future, or are happening right now. The extraction of these temporal events from natural language is beneficial to many applications in computer science, Question Answering (QA) and text summarization to name a few. In this blog post, which I have adapted from a <a href="https://github.com/namilus/temporal-event-tagger">university assignment</a> I describe an approach to extracting temporal events from texts. Examples of temporal events are given below:
+</p>
+<ul class="org-ul">
+<li>&ldquo;John <i>answered</i> the telephone&rdquo;</li>
+<li>&ldquo;An <i>investigation</i> was undertaken&rdquo;</li>
+</ul>
+
+<p>
+In these examples, the events are &ldquo;answered&rdquo; and &ldquo;investigation&rdquo;. Typically we find that tensed verbs and sometimes nominals, depending on the context, are events. The goal here is to predict whether each word in a block of text, be it a news article, blog, etc., represents an event or not.
+</p>
+
+<p>
+Another way to think about this problem is that we are given a list of words, and we need to determine which of these words are an event which are not an event. What we have here is a classification problem. However here we are dealing with words, unlike most machine learning applications, where we deal with an <i>n</i>-length vector of numbers. Established techniques of vectorizing text operate at the document level <i>e.g.</i> vectorizing an entire document that has already been labelled for some attribute <i>e.g</i> its sentiment. Models like <code>word2vec</code> are concerned with converting a word into a vector, so that words with similiar meanings are nearby in the vector space. However, a word being tagged as an event also depends on the sequence of words that came before it. Depending on its context, a word will be tagged as an event, <i>e.g</i> &ldquo;The stock price <i>rose</i> yesterday&rdquo;, or not an event, <i>e.g</i> &ldquo;He gave his wife a red <i>rose</i>&rdquo;.
+Context is taken into account by using a sequence classifier called a Hidden Markov Model (HMM). Section <a href="#org51e90ea">DATASET &amp; FEATURES</a> explains our training set, the TimeBank 1.2 corpus, and the features we extracted. Section <a href="#org0d893ce">METHODS</a> describes how we trained our HMM. Section <a href="#orgc4c2181">EXPERIMENTS</a> describes and discusses the evaluation of our model. The code for the model is available <a href="https://github.com/namilus/temporal-event-tagger">here</a>. 
+</p>
+</div>
+</section>
+<section id="outline-container-org51e90ea" class="outline-2">
+<h2 id="org51e90ea">DATASET &amp; FEATURES</h2>
+<div class="outline-text-2" id="text-org51e90ea">
+<p>
+The dataset I chose is the Timebank 1.2 Corpus, available from the Linguistic Data Consortium (LDC). This is a collection of 183 news articles spanning a range of topics from corporate reporting and financial markets, to politics and crime. Each file can range from several sentences to several paragraphs in length. What is special about these news articles is that they have been annotated with an XML Markup Language called TimeML. The TimeML specification allows for temporal events to be tagged. Any text within the <code>&lt;EVENT&gt;&lt;/EVENT&gt;</code> tags is said to represent an event; this makes for an excellent training set for our model, as events are already labelled. The TimeBank corpus is used here as it has been annotated by three expert annotators and for the <code>EVENT</code> tags, a high inter-annotator agreement<sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup> of 0.78 is reported. Thus we can safely assume that the annotations of events in the TimeBank corpus are correct due to the high level of agreement between the annotators.
+</p>
+</div>
+<div id="outline-container-org1933179" class="outline-3">
+<h3 id="org1933179">FEATURES FOR HIDDEN MARKOV MODEL</h3>
+<div class="outline-text-3" id="text-org1933179">
+<p>
+Although the operation of the HMM is described in further detail in Section <a href="#org0d893ce">METHODS</a>, I&rsquo;ll describe some details here in order to fully explain the justification for the subsequent feature choices. 
+</p>
+
+<p>
+Two constituents of a HMM include the set of symbols and the set of states. The symbols are the words that we observe as part of the text which can be thought of as a function of the state the HMM is currently in. As we go through each word in the document, it is thought that the model goes from state to state and that the state it is currently in says something about the current word; <i>i.e</i> our model could have some state in it and whenever the model is in that state, then we can say the current word or <i>emission</i>, is an event. The transitions from state to state are said to be &ldquo;hidden&rdquo;, and it is these transitions I wish to elucidate with the model.
+</p>
+
+<p>
+The idea of tuning hyperparameters does not translate well to HMMs. There are no numerical features of which we can get a polynomial of some degree from, and no regularization parameter. Thus apart from altering the size of the training set, the only things I can change around are the two sets of symbols and states.
+</p>
+
+<p>
+For the set of states, this seems clear. Words are either events or they are not. Thus we have two states: an event state and a non-event state. When choosing the set of symbols, we can set it to be the vocabulary of our dataset. How the model deals with words that may appear, which are not part of this vocabulary, is explained further in the Section <a href="#orgcd06df0">SMOOTHING</a>.
+</p>
+
+
+<p>
+As mentioned previously, we find that tensed verbs are often tagged as events. Thus, instead of using the `raw&rsquo; word, we can replace the sequence of words in the document with the sequence of their POS tags. The NLP library <code>nltk</code> provides functionality to determine the Part-of-Speech (POS) tag of a word<sup><a id="fnr.2" class="footref" href="#fn.2">2</a></sup>. It is clear that whether a word is a verb, noun, preposition, etc., plays a large part on whether it is labelled as an event. For example, in a document we may find a sentence that reads:
+</p>
+<blockquote>
+<p>
+The stock price dropped dramatically on Thursday after the CEO resigned.
+</p>
+</blockquote>
+<p>
+We can replace this with its POS tag sequence, which would be:
+</p>
+<blockquote>
+<p>
+DT NN NN VBD RB IN NN IN DT NN VBD
+</p>
+</blockquote>
+<p>
+NLTK uses the Penn Treebank POS Tagset, and we will use this as our set of symbols, comparing how this approach behaves to just using the `raw’ words themselves.
+</p>
+</div>
+</div>
+</section>
+<section id="outline-container-org0d893ce" class="outline-2">
+<h2 id="org0d893ce">METHODS</h2>
+<div class="outline-text-2" id="text-org0d893ce">
+<p>
+We decided to use a Hidden Markov Model to label words. Text is, at its core, a sequence. Therefore sequence classifiers like HMMs are the best tool for the job. We define a HMM \(\lambda = (A, B)\), where A is the transition matrix and B is the observation likelihood matrix<sup><a id="fnr.3" class="footref" href="#fn.3">3</a></sup>. Each \(a_{ij}\) in \(A\) represents the transition probability \(P(s_j|s_i)\) of going from state \(s_i\) to state \(s_j\). This is known as the <i>Markov assumption</i>, which means that the next state is determined by only the current state of the model. \(B\) represents the probability of a word being emitted given the current state, \(P(w_i|s_i)\). These probabilities are computed using the Maximum Likelihood Estimate (MLE) :
+</p>
+\begin{equation*}
+P(s_i|s_{i-1}) = \frac{C(s_{i-1}, s_i)}{C(s_{i-1})}
+\end{equation*}
+\begin{equation*}
+P(w_i|s_i) = \frac{C(w_i, s_i)}{C(s_i)}
+\end{equation*}
+
+<p>
+When calculating the transition probabilites \(P(s_i|s_{i-1})\), we count the amount of times a word tagged with \(s_i\) is preceded by a word tagged \(s_{i-1}\) and then divide by the total times the \(s_{i-1}\) tag has been observed in the training data; these are just bigram counts that are used in NLP to create probabilistic language models. Emission probabilities \(P(w_i|s_i)\) are calculated by dividing the total amount of times emission \(w_i\) is tagged as \(s_i\), by the total occurences of \(s_i\) in the training data.
+</p>
+
+<p>
+Figure <a href="#orgdb42fa8">1</a> shows the HMM that we have come up with. We have 4 states: <code>&lt;s&gt;</code> represents the start of a sentence, <code>E</code> is the event state, <code>N</code> is the non-event state, and <code>&lt;/s&gt;</code> represents the end of a sentence. We feed into the HMM a sentence and it will tag words in that sentence - hence we need two extra states to denote the start and end. The arcs represent the possible transitions, and they are usually labelled by the probability of that transition happening. HMMs also take another parameter, \(\pi\), which is the probability distribution of which state we start in. In this case, we always start at state <code>&lt;s&gt;</code>. 
+</p>
+
+<p>
+If we have a sequence of \(n\) words, \(w^{n}_1\), and we want the corresponding tag sequence, \( s^{n}_1 \), we find this by calculating the most probable sequence. We have that \( \hat{s}^{n}_1 \), the most probable sequence of tags, is:
+</p>
+
+
+
+\begin{align}
+\hat{s}^{n}_1 & =  \arg\max_{s^{n}_1} P(s^{n}_1 | w^{n}_1) \\
+              & \approx  \arg\max_{s^{n}_1} \prod_{i=1}^{n} P(w_i|s_i)P(s_i|s_{i-1})
+\end{align}
+
+<p>
+The Viterbi algorithm is a dynamic programming algorithm that is used to find the sequence of tags that maximises \(P(w_i|s_i)P(s_i|s_{i-1})\). We used <code>nltk</code>&rsquo;s implementation of this algorithm in our project.
+</p>
+</div>
+<div id="outline-container-org2bbd94b" class="outline-3">
+<h3 id="org2bbd94b">PIPELINE</h3>
+<div class="outline-text-3" id="text-org2bbd94b">
+<p>
+In this section we will describe how we take the TimeML annotated news article and generate labelled sentences with which we train our HMM, as well as the format of the outputs generated. Firstly, we parse the XML and extract the raw text of the document, sentence by sentence, keeping track of which words have been annotated as events. We then calculate the transition and emission probabilities based on the training set. From this we use the <code>nltk.tag</code> module to create the Hidden Markov Model from these probabilities. This module takes care of calculating the most probable sequence of tags using the Viterbi algorithm. The full procedure is as follows:
+</p>
+<ul class="org-ul">
+<li>After parsing the XML, we have the sentence: &ldquo;The stock price dropped dramatically on Thursday after the CEO resigned.&rdquo;</li>
+<li><p>
+Then we tokenize, remove capital letters, and add markers to denote the beginning and end of the sentence:
+</p>
+<blockquote>
+<p>
+START the stock price dropped dramatically on thursday after the ceo resigned END
+</p>
+</blockquote></li>
+<li><p>
+From here we can choose to convert the words to their corresponding POS tags:
+</p>
+<blockquote>
+<p>
+START DT NN NN VBD RB IN NN IN DT NN VBD END
+</p>
+</blockquote></li>
+<li><p>
+These sentences are then used to calculate the transition probabilities and observation likelihoods. After determining the most probable tag sequence, a possible output from the HMM would look something like the following:
+</p>
+<blockquote>
+<p>
+&lt;s&gt; N N N E N N N N N N E &lt;/s&gt;
+</p>
+</blockquote></li>
+</ul>
+
+
+<div id="orgdb42fa8" class="figure">
+<p><img src="../images/posts/hmm.png" alt="hmm.png" />
+</p>
+<p><span class="figure-number">Figure 1: </span>The HMM we employ.</p>
+</div>
+</div>
+</div>
+</section>
+
+<section id="outline-container-orgc4c2181" class="outline-2">
+<h2 id="orgc4c2181">EXPERIMENTS</h2>
+<div class="outline-text-2" id="text-orgc4c2181">
+<p>
+I run several experiments here to evaluate the peformance of hte model. First I look at how the model behaves when I just train it on the raw emission words <i>i.e</i> there is no conversion of the words in the document to their POS tags. Then I will see how much better or worse, if any, the model performs when we do this conversion, as well as its comparison to a baseline. The motivation for conversion into POS tags is two-fold. Firstly, when using just the raw words, we are very likely to encounter words that our model has not been trained on. We take care of this using smoothing techniques that give psuedocounts for out-of-vocabulary (OOV) words so that the probabilities are not zero, but something more aligned with reality. I discuss the different types of smoothing and their effects on performance below. When smoothing, the probabilities in the observation likelihood matrix need to be recalculated every time we encounter an OOV word thus making testing a lot more computationally demanding. The idea behind replacing words with their POS is that the vocabulary is much smaller (~50 symbols) and so this drastically reduces the chance of an OOV words and we have dont have to do as much, if any, smoothing of probabilities. Secondly, as mentioned above, we see that tensed verbs are almost always tagged as events <i>e.g</i> &ldquo;I <i>went</i> to the store&rdquo;, &ldquo;He <i>dialled</i> the number&rdquo;, etc., and so maybe there is a trend here to be learned that is captured best through parts of speech. 
+</p>
+</div>
+
+
+<div id="outline-container-orgd48a44b" class="outline-3">
+<h3 id="orgd48a44b">RESULTS &amp; DISCUSSION</h3>
+<div class="outline-text-3" id="text-orgd48a44b">
+<p>
+I ran 5-fold cross validation on 2 models, one trained on the raw emissions and the other trained only on the POS tags. Table <a href="#org699c3dd">1</a> shows how the two models performed when predicting the data they were trained on. We can see for both, accuracy is very high, and there is a high disparity between the raw model&rsquo;s \(f_1\) score and that of the POS model. Table <a href="#org7a4f807">2</a> shows the same metrics but for the 2 models&rsquo; predictions on an unseen test set. Looking at accuracy, it stays around the same as the training accuracy, with a drop of .04 for the model trained on the raw emissions. What is clear though is that the raw model performs much better than the POS model, showing that only part-of-speech is not sufficient to train a HMM that can accurately, and precisely tag temporal events in text.
+</p>
+
+<p>
+The \(f_1\) score on the test set for the 2 models is interesting here. The raw model&rsquo;s \(f_1\) score decreases for the test set compared to the training set. This is due to the OOV words in the test set. Our model has never seen these words in training, and we don&rsquo;t see the tag for this word <i>i.e</i> we dont know whether it is an event or not, we just assume it&rsquo;s not an event, given that the majority of words in the training set are not events and smooth the probabilities accordingly. This has clear implications on the models performance, as we can the \(f_1\) score drops by 0.16. Section <a href="#orgcd06df0">SMOOTHING</a> tests other methods of smoothing and looks how close each gets to the training set \(f_1\) score.
+</p>
+
+
+<p>
+We can also see that despite both models having a very high accuracy, their \(f_1\) scores are comparatively much lower. This can only be due to the proportion of event and non-event words in the texts. Events are rare, and non-events make up the majority. Thus true negatives make up a large part of the confusion matrix and skew the accuracy closer to the optimal value of 1.
+</p>
+
+<p>
+Tables <a href="#orgba991e6">3</a> and <a href="#org3b67467">4</a> shows the confusion matrices for both the raw and POS models after having a train test split of 80:20 and tested on the unseen test set. We can clearly see that there a lot of true negatives which skew the accuracy. Therefore the accuracy of the model is not representative of its performance, and it is for that reason we include the \(f_1\) score. This combines precision and recall into one metric and gives us a much better idea of how or models are performing.
+</p>
+
+<p>
+Interestingly, the metrics for the POS model don&rsquo;t change going from the training set to the test set. One could look at the model trained on the raw emissions and argue it is overfitted to the data. However this is just because the size of the vocabulary in the training set is relatively small and that OOV are encountered often. If this training set had a more comprehensive vocabulary, we wouldn&rsquo;t see such a disparity between the raw model&rsquo;s training metrics and it&rsquo;s test metrics.
+</p>
+<table id="org699c3dd" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<caption class="t-above"><span class="table-number">Table 1:</span> Evaluation metrics for our model on the training set.</caption>
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">model</th>
+<th scope="col" class="org-left">accuracy</th>
+<th scope="col" class="org-left">\(f_1\) score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">raw</td>
+<td class="org-left">\((0.9615, \pm 0.0005)\)</td>
+<td class="org-left">\((0.8412, \pm 0.0021)\)</td>
+</tr>
+
+<tr>
+<td class="org-left">POS</td>
+<td class="org-left">\((0.8940, \pm 0.0014)\)</td>
+<td class="org-left">\((0.4229, \pm 0.0165)\)</td>
+</tr>
+</tbody>
+</table>
+
+
+<table id="org7a4f807" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<caption class="t-above"><span class="table-number">Table 2:</span> Evaluation metrics for our model on the test set.</caption>
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">model</th>
+<th scope="col" class="org-left">accuracy</th>
+<th scope="col" class="org-left">\(f_1\) score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">raw</td>
+<td class="org-left">\((0.9291, \pm 0.0011)\)</td>
+<td class="org-left">\((0.6691, \pm 0.0192)\)</td>
+</tr>
+
+<tr>
+<td class="org-left">POS</td>
+<td class="org-left">\((0.8936, \pm 0.0040)\)</td>
+<td class="org-left">\((0.4219, \pm 0.0337)\)</td>
+</tr>
+</tbody>
+</table>
+
+
+<table id="orgba991e6" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<caption class="t-above"><span class="table-number">Table 3:</span> The confusion matrix of the raw model.</caption>
+
+<colgroup>
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">TN</th>
+<th scope="col" class="org-right">FP</th>
+<th scope="col" class="org-right">FN</th>
+<th scope="col" class="org-right">TP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">9897</td>
+<td class="org-right">237</td>
+<td class="org-right">542</td>
+<td class="org-right">914</td>
+</tr>
+</tbody>
+</table>
+
+<table id="org3b67467" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<caption class="t-above"><span class="table-number">Table 4:</span> The confusion matrix of the model trained on POS tags.</caption>
+
+<colgroup>
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">TN</th>
+<th scope="col" class="org-right">FP</th>
+<th scope="col" class="org-right">FN</th>
+<th scope="col" class="org-right">TP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">9859</td>
+<td class="org-right">247</td>
+<td class="org-right">915</td>
+<td class="org-right">555</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+
+<div id="outline-container-orgcd06df0" class="outline-4">
+<h4 id="orgcd06df0">SMOOTHING</h4>
+<div class="outline-text-4" id="text-orgcd06df0">
+<p>
+The previous models trained on the raw emissions were assuming every OOV word to be a non-event. Precisely, what this means is that we apply add-1 (laplace) smoothing to the observation likelihood probabilities. Given an unseen word \(w'\), then \(P(w'|N) = \frac{1}{C(N)}\). Now since \(C(s)\) where \(s\) is the non-event state has increased by 1, we also need to update the probabilities for every other word in our vocabulary. This is of course time intensive and is one of the motivaitions for converting the raw emissions into their POS tags. 
+</p>
+
+<p>
+Clearly this isn&rsquo;t the best way to deal with OOV words. Instead of always assuming the word is not an event, another technique takes advantage of the idea expressed in previous sections, in that tensed verbs are almost always tagged as events. The new smoothing technique is as follows:
+</p>
+<ul class="org-ul">
+<li>If the OOV word is a tensed verb, update the probabilities assuming it is an event</li>
+<li>Else, it is a non-event word, and update the probabilities accordingly</li>
+</ul>
+
+<p>
+Again with this new method of smoothing, we run 5-fold cross validation, and the results are shown in Table <a href="#org08b03cb">5</a>. The \(f_1\) score for the test set jumps significantly, from the 0.6691 reported with the old smoothing to 0.7115 when using this new smoothing technique. Accuracy stays around the same value, but what we see here is a marked increase in performance from what is at most a heuristic about the data. Figure <a href="#org63ebf94">2</a> shows the difference in \(f_1\) scores for the two different smoothing techniques. Indeed it is not only verbs that can be events, and any further improvement in performance will have to take that into account. We do not do so here.
+</p>
+
+<table id="org08b03cb" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<caption class="t-above"><span class="table-number">Table 5:</span> 5-fold cross validation results with new smoothing technique</caption>
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">set</th>
+<th scope="col" class="org-left">accuracy</th>
+<th scope="col" class="org-left">\(f_1\) score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">train</td>
+<td class="org-left">\((0.9615, \pm 0.0004)\)</td>
+<td class="org-left">\((0.8412, \pm 0.0021)\)</td>
+</tr>
+
+<tr>
+<td class="org-left">test</td>
+<td class="org-left">\((0.9339, \pm 0.0015)\)</td>
+<td class="org-left">\((0.7115, \pm 0.0153)\)</td>
+</tr>
+</tbody>
+</table>
+
+
+
+<div id="org63ebf94" class="figure">
+<p><img src="../images/posts/smooth.png" alt="smooth.png" />
+</p>
+<p><span class="figure-number">Figure 2: </span>The improvement in \(f_1\) after applying the new smoothing technique.</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orga1b95b4" class="outline-4">
+<h4 id="orga1b95b4">BASELINE COMPARISONS</h4>
+<div class="outline-text-4" id="text-orga1b95b4">
+<p>
+A baseline that we can use here is the idea mentioned throughout this report. Tensed verbs are often events. Therefore we can train a baseline to tag words as events if they are a verb. What we want to see how much better our HMM model with all of its transition probabilities and observation likelihoods performs compared to this simple heuristic. We did an 80:20 split and tested this baseline on the 20% test set so the numbers in the confusion matrix are similiar to those shown previously. 
+</p>
+
+<table id="org77c239d" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<caption class="t-above"><span class="table-number">Table 6:</span> The accuracy and \(f_1\) of our baseline.</caption>
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">model</th>
+<th scope="col" class="org-left">accuracy</th>
+<th scope="col" class="org-left">\(f_1\) score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">baseline</td>
+<td class="org-left">\((0.8757, \pm 0.0832)\)</td>
+<td class="org-left">\((0.4651, \pm 0.2731)\)</td>
+</tr>
+</tbody>
+</table>
+
+<table id="org0c68ae8" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<caption class="t-above"><span class="table-number">Table 7:</span> The confusion matrix for the baseline.</caption>
+
+<colgroup>
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">TN</th>
+<th scope="col" class="org-right">FP</th>
+<th scope="col" class="org-right">FN</th>
+<th scope="col" class="org-right">TP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">9537</td>
+<td class="org-right">534</td>
+<td class="org-right">856</td>
+<td class="org-right">608</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Table <a href="#org77c239d">6</a> shows the accuracy and more importantly the baseline&rsquo;s \(f_1\) score. It is much worse than our trained model, with a mean of 0.4651 for each sentence and a very large standard error. The baseline also makes more errors in false positives and false negatives than our model. It is clear then that just this heuristic about verbs being events is not sufficient to create a precise tagger.
+</p>
+
+
+
+<div id="org07fbe9c" class="figure">
+<p><img src="../images/posts/base.png" alt="base.png" />
+</p>
+<p><span class="figure-number">Figure 3: </span>Comparison of our raw model&rsquo;s \(f_1\) to that of the baseline.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<div id="footnotes">
+<h2 class="footnotes">Footnotes: </h2>
+<div id="text-footnotes">
+
+<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1">1</a></sup> <div class="footpara"><p class="footpara">
+Inter annotator agreement is a measure of how different annotators agree when annotating a document. This value can be between 0 and 1, and it is understood that a higher value means that there is a high level of agreement by the annotators, increasing confidence on the true value of the annotation.
+</p></div></div>
+
+<div class="footdef"><sup><a id="fn.2" class="footnum" href="#fnr.2">2</a></sup> <div class="footpara"><p class="footpara">
+This was also trained using a HMM and acheives 97% accuracy.
+</p></div></div>
+
+<div class="footdef"><sup><a id="fn.3" class="footnum" href="#fnr.3">3</a></sup> <div class="footpara"><p class="footpara">
+This notation is taken from Jurafsky &amp; Martin
+</p></div></div>
+
+
+</div>
+</div></main>
+<footer id="postamble" class="status">
+<div class='footer'>
+  A <a href='mailto:sulimanm@tcd.ie'>Mohamed Suliman</a> Production <br>
+  Copyright © 2020 <br>
+  Last updated on Feb 14, 2021. Generated using <a href="https://www.gnu.org/software/emacs/">Emacs</a> 26.3 (<a href="https://orgmode.org">Org</a> mode 9.1.9).
+</div>
+</footer>
+</body>
+</html>
